@@ -19,6 +19,7 @@ import android.util.Log;
 import android.util.SparseArray;
 
 import com.diploma.sadwyn.zippyscanner.App;
+import com.diploma.sadwyn.zippyscanner.BuildConfig;
 import com.google.android.gms.vision.Detector;
 import com.google.android.gms.vision.text.TextBlock;
 import com.google.cloud.translate.Translate;
@@ -60,7 +61,7 @@ public class OcrDetectorProcessor implements Detector.Processor<TextBlock> {
                     Log.d("OcrDetectorProcessor", "Text detected! " + item.getValue());
                 }
 
-                App.getApi().translate(item.getValue(), toLang, "text", "en", "nmt", "AIzaSyAl3-Xmk4OKF7-u5WVz4CSfG-cEEVlw3TU")
+                App.getApi().translate(item.getValue(), toLang, "text", "en", "nmt", BuildConfig.APIKEY)
                         .subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe(translationResult -> {
