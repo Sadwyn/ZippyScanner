@@ -34,6 +34,7 @@ import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
+import android.widget.ImageButton;
 import android.widget.Toast;
 
 import com.diploma.sadwyn.zippyscanner.R;
@@ -80,7 +81,7 @@ public final class OcrCaptureActivity extends AppCompatActivity {
 
     // A TextToSpeech engine for speaking a String value.
     private TextToSpeech tts;
-
+    private ImageButton pause_or_play_button;
     private String toLang;
 
     /**
@@ -97,7 +98,7 @@ public final class OcrCaptureActivity extends AppCompatActivity {
         }
         mPreview = findViewById(R.id.preview);
         mGraphicOverlay = findViewById(R.id.graphicOverlay);
-
+        pause_or_play_button = findViewById(R.id.pause);
 
         // Set good defaults for capturing text.
         boolean autoFocus = true;
@@ -177,6 +178,10 @@ public final class OcrCaptureActivity extends AppCompatActivity {
         // create a separate tracker instance for each text block.
         TextRecognizer textRecognizer = new TextRecognizer.Builder(context).build();
         textRecognizer.setProcessor(new OcrDetectorProcessor(mGraphicOverlay, toLang));
+
+        pause_or_play_button.setOnClickListener(view -> {
+            OcrDetectorProcessor.isStopped = !OcrDetectorProcessor.isStopped;
+        });
 
         if (!textRecognizer.isOperational()) {
             // Note: The first time that an app using a Vision API is installed on a

@@ -35,6 +35,7 @@ public class OcrDetectorProcessor implements Detector.Processor<TextBlock> {
 
     private GraphicOverlay<OcrGraphic> mGraphicOverlay;
     private String toLang;
+    public static boolean isStopped;
 
     public OcrDetectorProcessor(GraphicOverlay<OcrGraphic> ocrGraphicOverlay, String toLang) {
         mGraphicOverlay = ocrGraphicOverlay;
@@ -50,32 +51,31 @@ public class OcrDetectorProcessor implements Detector.Processor<TextBlock> {
      */
     @Override
     public void receiveDetections(Detector.Detections<TextBlock> detections) {
-        mGraphicOverlay.clear();
-        SparseArray<TextBlock> items = detections.getDetectedItems();
-        for (int i = 0; i < items.size(); ++i) {
-            TextBlock item = items.valueAt(i);
-            if (item != null && item.getValue() != null) {
-                Log.d("OcrDetectorProcessor", "Text detected! " + item.getValue());
-            }
+        if (!isStopped) {
+            mGraphicOverlay.clear();
+            SparseArray<TextBlock> items = detections.getDetectedItems();
+            for (int i = 0; i < items.size(); ++i) {
+                TextBlock item = items.valueAt(i);
+                if (item != null && item.getValue() != null) {
+                    Log.d("OcrDetectorProcessor", "Text detected! " + item.getValue());
+                }
 
-            App.getApi().translate(item.getValue(), toLang, "text", "en", "nmt", "AIzaSyAl3-Xmk4OKF7-u5WVz4CSfG-cEEVlw3TU")
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(translationResult -> {
-                        OcrGraphic graphic = new OcrGraphic(mGraphicOverlay, item, translationResult.getData().getTranslations().get(0).getTranslatedText());
-                        mGraphicOverlay.add(graphic);
-                    }, Throwable::printStackTrace);
-        }
-        try {
-            Thread.sleep(2500);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+                App.getApi().translate(item.getValue(), toLang, "text", "en", "nmt", "AIzaSyAl3-Xmk4OKF7-u5WVz4CSfG-cEEVlw3TU")
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(translationResult -> {
+                            OcrGraphic graphic = new OcrGraphic(mGraphicOverlay, item, translationResult.getData().getTranslations().get(0).getTranslatedText());
+                            mGraphicOverlay.add(graphic);
+                        }, Throwable::printStackTrace);
+            }
+            try {
+                Thread.sleep(2500);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 
-    /**
-     * Frees the resources associated with this detection processor.
-     */
     @Override
     public void release() {
         mGraphicOverlay.clear();
