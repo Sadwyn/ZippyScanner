@@ -81,6 +81,8 @@ public final class OcrCaptureActivity extends AppCompatActivity {
     // A TextToSpeech engine for speaking a String value.
     private TextToSpeech tts;
 
+    private String toLang;
+
     /**
      * Initializes the UI and creates the detector pipeline.
      */
@@ -88,10 +90,14 @@ public final class OcrCaptureActivity extends AppCompatActivity {
     public void onCreate(Bundle bundle) {
         super.onCreate(bundle);
         setContentView(R.layout.ocr_capture);
-
+        if (bundle != null) {
+            toLang = bundle.getString("toLanguage");
+        } else if (getIntent() != null) {
+            toLang = getIntent().getStringExtra("toLanguage");
+        }
         mPreview = findViewById(R.id.preview);
         mGraphicOverlay = findViewById(R.id.graphicOverlay);
-        
+
 
         // Set good defaults for capturing text.
         boolean autoFocus = true;
@@ -120,6 +126,12 @@ public final class OcrCaptureActivity extends AppCompatActivity {
                     }
                 };
         tts = new TextToSpeech(this.getApplicationContext(), listener);
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        outState.putString("toLanguage", toLang);
+        super.onSaveInstanceState(outState);
     }
 
     /**
@@ -164,7 +176,7 @@ public final class OcrCaptureActivity extends AppCompatActivity {
         // graphics for each text block on screen.  The factory is used by the multi-processor to
         // create a separate tracker instance for each text block.
         TextRecognizer textRecognizer = new TextRecognizer.Builder(context).build();
-        textRecognizer.setProcessor(new OcrDetectorProcessor(mGraphicOverlay));
+        textRecognizer.setProcessor(new OcrDetectorProcessor(mGraphicOverlay, toLang));
 
         if (!textRecognizer.isOperational()) {
             // Note: The first time that an app using a Vision API is installed on a

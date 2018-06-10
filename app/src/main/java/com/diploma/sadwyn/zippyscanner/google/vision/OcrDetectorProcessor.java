@@ -34,9 +34,11 @@ import io.reactivex.schedulers.Schedulers;
 public class OcrDetectorProcessor implements Detector.Processor<TextBlock> {
 
     private GraphicOverlay<OcrGraphic> mGraphicOverlay;
+    private String toLang;
 
-    public OcrDetectorProcessor(GraphicOverlay<OcrGraphic> ocrGraphicOverlay) {
+    public OcrDetectorProcessor(GraphicOverlay<OcrGraphic> ocrGraphicOverlay, String toLang) {
         mGraphicOverlay = ocrGraphicOverlay;
+        this.toLang = toLang;
     }
 
     /**
@@ -56,11 +58,10 @@ public class OcrDetectorProcessor implements Detector.Processor<TextBlock> {
                 Log.d("OcrDetectorProcessor", "Text detected! " + item.getValue());
             }
 
-            App.getApi().translate(item.getValue(), "ru", "text", "en", "nmt", "AIzaSyAl3-Xmk4OKF7-u5WVz4CSfG-cEEVlw3TU")
+            App.getApi().translate(item.getValue(), toLang, "text", "en", "nmt", "AIzaSyAl3-Xmk4OKF7-u5WVz4CSfG-cEEVlw3TU")
                     .subscribeOn(Schedulers.io())
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(translationResult -> {
-
                         OcrGraphic graphic = new OcrGraphic(mGraphicOverlay, item, translationResult.getData().getTranslations().get(0).getTranslatedText());
                         mGraphicOverlay.add(graphic);
                     }, Throwable::printStackTrace);
