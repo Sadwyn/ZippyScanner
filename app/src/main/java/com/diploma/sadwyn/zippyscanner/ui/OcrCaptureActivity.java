@@ -19,6 +19,8 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -37,7 +39,10 @@ import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
+import android.view.animation.DecelerateInterpolator;
 import android.view.animation.TranslateAnimation;
+import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
@@ -53,6 +58,7 @@ import com.google.android.gms.vision.text.Text;
 import com.google.android.gms.vision.text.TextRecognizer;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Locale;
 
 
@@ -88,7 +94,11 @@ public final class OcrCaptureActivity extends AppCompatActivity {
     private TextToSpeech tts;
     private String toLang;
     private String fromLang;
-    private TranslateAnimation translateAnimation;
+    private TranslateAnimation translateAnimationScannerLine;
+    private Animation translateAnimationCopyButtonIn;
+    private Animation translateAnimationCopyButtonOut;
+
+    private Button copyButton;
 
     /**
      * Initializes the UI and creates the detector pipeline.
@@ -108,12 +118,28 @@ public final class OcrCaptureActivity extends AppCompatActivity {
         mGraphicOverlay = findViewById(R.id.graphicOverlay);
         scannerRow = findViewById(R.id.scannerRow);
         topLayout = findViewById(R.id.topLayout);
+        copyButton = findViewById(R.id.copyButton);
 
-        translateAnimation = new TranslateAnimation(Animation.RELATIVE_TO_PARENT, 0.0f, Animation.RELATIVE_TO_PARENT, 0.0f, Animation.RELATIVE_TO_PARENT, 0.0f,Animation.RELATIVE_TO_PARENT, 1.0f);
-        translateAnimation.setInterpolator(new AccelerateDecelerateInterpolator());
-        translateAnimation.setRepeatMode(Animation.REVERSE);
-        translateAnimation.setRepeatCount(Animation.INFINITE);
-        translateAnimation.setDuration(500);
+        translateAnimationScannerLine = new TranslateAnimation(Animation.RELATIVE_TO_PARENT, 0.0f, Animation.RELATIVE_TO_PARENT, 0.0f, Animation.RELATIVE_TO_PARENT, 0.0f, Animation.RELATIVE_TO_PARENT, 1.0f);
+        translateAnimationScannerLine.setInterpolator(new AccelerateDecelerateInterpolator());
+        translateAnimationScannerLine.setRepeatMode(Animation.REVERSE);
+        translateAnimationScannerLine.setRepeatCount(Animation.INFINITE);
+        translateAnimationScannerLine.setDuration(500);
+
+        translateAnimationCopyButtonIn = AnimationUtils.loadAnimation(this, R.anim.slide_in_from_right);
+        translateAnimationCopyButtonOut = AnimationUtils.loadAnimation(this, R.anim.slide_out_to_right);
+
+        copyButton.setOnClickListener(view1 -> {
+            StringBuilder copyMessage = new StringBuilder();
+
+            for (String text : OcrDetectorProcessor.textToCopy) {
+                copyMessage.append(text).append(" ");
+            }
+            ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            assert clipboard != null;
+            clipboard.setPrimaryClip(ClipData.newPlainText("Zippy Scanned Text", copyMessage.toString().trim()));
+            Toast.makeText(getApplicationContext(), "Copied", Toast.LENGTH_SHORT).show();
+        });
 
         // Set good defaults for capturing text.
         boolean autoFocus = true;
@@ -196,11 +222,20 @@ public final class OcrCaptureActivity extends AppCompatActivity {
         textRecognizer.setProcessor(new OcrDetectorProcessor(mGraphicOverlay, toLang, fromLang));
 
         topLayout.setOnClickListener(view -> {
-            if(!OcrDetectorProcessor.isStopped){
+            if (!OcrDetectorProcessor.isStopped) {
                 scannerRow.clearAnimation();
-            }
-            else {
-                scannerRow.startAnimation(translateAnimation);
+
+                if (OcrDetectorProcessor.textToCopy.isEmpty())
+                    copyButton.setVisibility(View.INVISIBLE);
+                else {
+                    copyButton.startAnimation(translateAnimationCopyButtonIn);
+                    copyButton.setVisibility(View.VISIBLE);
+                }
+            } else {
+                if (copyButton.getVisibility() == View.VISIBLE) {
+                    copyButton.startAnimation(translateAnimationCopyButtonOut);
+                }
+                scannerRow.startAnimation(translateAnimationScannerLine);
             }
             OcrDetectorProcessor.isStopped = !OcrDetectorProcessor.isStopped;
         });
@@ -310,11 +345,7 @@ public final class OcrCaptureActivity extends AppCompatActivity {
         Log.e(TAG, "Permission not granted: results len = " + grantResults.length +
                 " Result code = " + (grantResults.length > 0 ? grantResults[0] : "(empty)"));
 
-        DialogInterface.OnClickListener listener = new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int id) {
-                finish();
-            }
-        };
+        DialogInterface.OnClickListener listener = (dialog, id) -> finish();
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Multitracker sample")

@@ -22,6 +22,8 @@ import android.graphics.RectF;
 import android.util.Log;
 
 import com.diploma.sadwyn.zippyscanner.App;
+import com.google.android.gms.vision.text.Element;
+import com.google.android.gms.vision.text.Line;
 import com.google.android.gms.vision.text.Text;
 import com.google.android.gms.vision.text.TextBlock;
 import com.google.cloud.translate.Translate;
@@ -108,6 +110,7 @@ public class OcrGraphic extends GraphicOverlay.Graphic {
         }
         float left = translateX(mText.getBoundingBox().left);
         float bottom = translateY(mText.getBoundingBox().bottom);
+
         canvas.drawText(textValue, left, bottom, sTextPaint);
     }
 }
