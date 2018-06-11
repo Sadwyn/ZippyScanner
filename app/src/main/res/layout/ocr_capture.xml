@@ -7,6 +7,8 @@
     android:layout_height="match_parent"
     android:keepScreenOn="true">
 
+
+
     <com.diploma.sadwyn.zippyscanner.google.vision.CameraSourcePreview
         android:id="@+id/preview"
         android:layout_width="match_parent"
@@ -19,6 +21,12 @@
 
     </com.diploma.sadwyn.zippyscanner.google.vision.CameraSourcePreview>
 
+    <View
+        android:id="@+id/scannerRow"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_gravity="top"
+        android:background="#1ea300"/>
 
     <ImageButton
         android:id="@+id/pause"

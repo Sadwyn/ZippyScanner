@@ -34,6 +34,10 @@ import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
+import android.view.View;
+import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.Animation;
+import android.view.animation.TranslateAnimation;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
@@ -78,11 +82,12 @@ public final class OcrCaptureActivity extends AppCompatActivity {
     // Helper objects for detecting taps and pinches.
     private ScaleGestureDetector scaleGestureDetector;
     private GestureDetector gestureDetector;
-
+    private View scannerRow;
     // A TextToSpeech engine for speaking a String value.
     private TextToSpeech tts;
     private ImageButton pause_or_play_button;
     private String toLang;
+    private TranslateAnimation translateAnimation;
 
     /**
      * Initializes the UI and creates the detector pipeline.
@@ -99,6 +104,13 @@ public final class OcrCaptureActivity extends AppCompatActivity {
         mPreview = findViewById(R.id.preview);
         mGraphicOverlay = findViewById(R.id.graphicOverlay);
         pause_or_play_button = findViewById(R.id.pause);
+        scannerRow = findViewById(R.id.scannerRow);
+
+        translateAnimation = new TranslateAnimation(Animation.RELATIVE_TO_PARENT, 0.0f, Animation.RELATIVE_TO_PARENT, 0.0f, Animation.RELATIVE_TO_PARENT, 0.0f,Animation.RELATIVE_TO_PARENT, 1.0f);
+        translateAnimation.setInterpolator(new AccelerateDecelerateInterpolator());
+        translateAnimation.setRepeatMode(Animation.REVERSE);
+        translateAnimation.setRepeatCount(Animation.INFINITE);
+        translateAnimation.setDuration(500);
 
         // Set good defaults for capturing text.
         boolean autoFocus = true;
@@ -180,6 +192,12 @@ public final class OcrCaptureActivity extends AppCompatActivity {
         textRecognizer.setProcessor(new OcrDetectorProcessor(mGraphicOverlay, toLang));
 
         pause_or_play_button.setOnClickListener(view -> {
+            if(!OcrDetectorProcessor.isStopped){
+                scannerRow.clearAnimation();
+            }
+            else {
+                scannerRow.startAnimation(translateAnimation);
+            }
             OcrDetectorProcessor.isStopped = !OcrDetectorProcessor.isStopped;
         });
 

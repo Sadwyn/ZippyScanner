@@ -36,7 +36,7 @@ public class OcrDetectorProcessor implements Detector.Processor<TextBlock> {
 
     private GraphicOverlay<OcrGraphic> mGraphicOverlay;
     private String toLang;
-    public static boolean isStopped;
+    public static boolean isStopped = true;
 
     public OcrDetectorProcessor(GraphicOverlay<OcrGraphic> ocrGraphicOverlay, String toLang) {
         mGraphicOverlay = ocrGraphicOverlay;

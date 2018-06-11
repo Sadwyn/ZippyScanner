@@ -11,14 +11,16 @@ import android.widget.Spinner;
 
 import com.diploma.sadwyn.zippyscanner.R;
 
+import org.angmarch.views.NiceSpinner;
+
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public final class MainActivity extends android.support.v7.app.AppCompatActivity {
-    private Spinner fromLanguage;
-    private Spinner toLanguage;
+    private NiceSpinner toLanguage;
     private Map<String, String> toLanguagePair;
 
 
@@ -27,24 +29,23 @@ public final class MainActivity extends android.support.v7.app.AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         Button startScan = findViewById(R.id.startCapture);
-        fromLanguage = findViewById(R.id.lang_from);
         toLanguage = findViewById(R.id.lang_to);
 
         toLanguagePair = getKeyValueFromStringArray(getApplicationContext());
+
+
 
         List<String> countryNames = new ArrayList<>();
 
         for (Map.Entry<String, String> entry : toLanguagePair.entrySet()) {
             countryNames.add(entry.getKey());
         }
+        Collections.sort(countryNames);
 
-        ArrayAdapter<String> toAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item);
-        toAdapter.addAll(countryNames);
-        toAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        toLanguage.setAdapter(toAdapter);
+        toLanguage.attachDataSource(countryNames);
 
         startScan.setOnClickListener(view -> {
-            String selectedLangTo = String.valueOf(toLanguage.getSelectedItem());
+            String selectedLangTo = String.valueOf(toLanguage.getText().toString());
             Intent intent = new Intent(this, OcrCaptureActivity.class);
             intent.putExtra("toLanguage", toLanguagePair.get(selectedLangTo));
             startActivity(intent);
