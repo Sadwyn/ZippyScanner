@@ -12,11 +12,33 @@
     <string name="ocr_success">Text read successfully</string>
     <string name="ocr_failure">No text captured</string>
     <string name="ocr_error">"Error reading text: %1$s"</string>
+
+    <string-array name="source_languages">
+        <item>Catalan|ca</item>
+        <item>Danish|da</item>
+        <item>Dutch|nl</item>
+        <item>English|en</item>
+        <item>Finnish|fi</item>
+        <item>French|fr</item>
+        <item>German|de</item>
+        <item>Hungarian|hu</item>
+        <item>Italian|it</item>
+        <item>Latin|la</item>
+        <item>Norwegian|no</item>
+        <item>Polish|pl</item>
+        <item>Portuguese(Portugal, Brazil)|pt</item>
+        <item>Romanian|ro</item>
+        <item>Spanish|es</item>
+        <item>Swedish|sv</item>
+        <item>Tagalog(Filipino)|tl</item>
+        <item>Turkish|tr</item>
+    </string-array>
+
     <string-array name="target_languages">
         <item>Afrikaans|af</item>
         <item>Albanian|sq</item>
         <item>Amharic|am</item>
-        <item> Arabic|ar</item>
+        <item>Arabic|ar</item>
         <item>Armenian|hy</item>
         <item>Azeerbaijani|az</item>
         <item>Basque|eu</item>

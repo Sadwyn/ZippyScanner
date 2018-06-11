@@ -21,6 +21,7 @@ import android.util.SparseArray;
 import com.diploma.sadwyn.zippyscanner.App;
 import com.diploma.sadwyn.zippyscanner.BuildConfig;
 import com.google.android.gms.vision.Detector;
+import com.google.android.gms.vision.text.Text;
 import com.google.android.gms.vision.text.TextBlock;
 import com.google.cloud.translate.Translate;
 import com.google.cloud.translate.TranslateOptions;
@@ -36,11 +37,13 @@ public class OcrDetectorProcessor implements Detector.Processor<TextBlock> {
 
     private GraphicOverlay<OcrGraphic> mGraphicOverlay;
     private String toLang;
+    private String fromLang;
     public static boolean isStopped = true;
 
-    public OcrDetectorProcessor(GraphicOverlay<OcrGraphic> ocrGraphicOverlay, String toLang) {
+    public OcrDetectorProcessor(GraphicOverlay<OcrGraphic> ocrGraphicOverlay, String toLang, String fromLang) {
         mGraphicOverlay = ocrGraphicOverlay;
         this.toLang = toLang;
+        this.fromLang = fromLang;
     }
 
     /**
@@ -59,15 +62,18 @@ public class OcrDetectorProcessor implements Detector.Processor<TextBlock> {
                 TextBlock item = items.valueAt(i);
                 if (item != null && item.getValue() != null) {
                     Log.d("OcrDetectorProcessor", "Text detected! " + item.getValue());
-                }
 
-                App.getApi().translate(item.getValue(), toLang, "text", "en", "nmt", BuildConfig.APIKEY)
-                        .subscribeOn(Schedulers.io())
-                        .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe(translationResult -> {
-                            OcrGraphic graphic = new OcrGraphic(mGraphicOverlay, item, translationResult.getData().getTranslations().get(0).getTranslatedText());
-                            mGraphicOverlay.add(graphic);
-                        }, Throwable::printStackTrace);
+                    for (Text text : item.getComponents()) {
+                        App.getApi().translate(text.getValue(), toLang, "text", fromLang, "nmt", BuildConfig.APIKEY)
+                                .subscribeOn(Schedulers.io())
+                                .observeOn(AndroidSchedulers.mainThread())
+                                .subscribe(translationResult -> {
+                                    OcrGraphic graphic = new OcrGraphic(mGraphicOverlay, text, translationResult.getData().getTranslations().get(0).getTranslatedText());
+                                    mGraphicOverlay.add(graphic);
+                                }, Throwable::printStackTrace);
+                    }
+
+                }
             }
             try {
                 Thread.sleep(2500);

@@ -38,7 +38,7 @@ import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.Animation;
 import android.view.animation.TranslateAnimation;
-import android.widget.ImageButton;
+import android.widget.FrameLayout;
 import android.widget.Toast;
 
 import com.diploma.sadwyn.zippyscanner.R;
@@ -49,7 +49,7 @@ import com.diploma.sadwyn.zippyscanner.google.vision.OcrDetectorProcessor;
 import com.diploma.sadwyn.zippyscanner.google.vision.OcrGraphic;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
-import com.google.android.gms.vision.text.TextBlock;
+import com.google.android.gms.vision.text.Text;
 import com.google.android.gms.vision.text.TextRecognizer;
 
 import java.io.IOException;
@@ -78,6 +78,7 @@ public final class OcrCaptureActivity extends AppCompatActivity {
     private CameraSource mCameraSource;
     private CameraSourcePreview mPreview;
     private GraphicOverlay<OcrGraphic> mGraphicOverlay;
+    private FrameLayout topLayout;
 
     // Helper objects for detecting taps and pinches.
     private ScaleGestureDetector scaleGestureDetector;
@@ -85,8 +86,8 @@ public final class OcrCaptureActivity extends AppCompatActivity {
     private View scannerRow;
     // A TextToSpeech engine for speaking a String value.
     private TextToSpeech tts;
-    private ImageButton pause_or_play_button;
     private String toLang;
+    private String fromLang;
     private TranslateAnimation translateAnimation;
 
     /**
@@ -98,13 +99,15 @@ public final class OcrCaptureActivity extends AppCompatActivity {
         setContentView(R.layout.ocr_capture);
         if (bundle != null) {
             toLang = bundle.getString("toLanguage");
+            fromLang = bundle.getString("fromLanguage");
         } else if (getIntent() != null) {
             toLang = getIntent().getStringExtra("toLanguage");
+            fromLang = getIntent().getStringExtra("fromLanguage");
         }
         mPreview = findViewById(R.id.preview);
         mGraphicOverlay = findViewById(R.id.graphicOverlay);
-        pause_or_play_button = findViewById(R.id.pause);
         scannerRow = findViewById(R.id.scannerRow);
+        topLayout = findViewById(R.id.topLayout);
 
         translateAnimation = new TranslateAnimation(Animation.RELATIVE_TO_PARENT, 0.0f, Animation.RELATIVE_TO_PARENT, 0.0f, Animation.RELATIVE_TO_PARENT, 0.0f,Animation.RELATIVE_TO_PARENT, 1.0f);
         translateAnimation.setInterpolator(new AccelerateDecelerateInterpolator());
@@ -144,6 +147,7 @@ public final class OcrCaptureActivity extends AppCompatActivity {
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         outState.putString("toLanguage", toLang);
+        outState.putString("fromLanguage", fromLang);
         super.onSaveInstanceState(outState);
     }
 
@@ -189,9 +193,9 @@ public final class OcrCaptureActivity extends AppCompatActivity {
         // graphics for each text block on screen.  The factory is used by the multi-processor to
         // create a separate tracker instance for each text block.
         TextRecognizer textRecognizer = new TextRecognizer.Builder(context).build();
-        textRecognizer.setProcessor(new OcrDetectorProcessor(mGraphicOverlay, toLang));
+        textRecognizer.setProcessor(new OcrDetectorProcessor(mGraphicOverlay, toLang, fromLang));
 
-        pause_or_play_button.setOnClickListener(view -> {
+        topLayout.setOnClickListener(view -> {
             if(!OcrDetectorProcessor.isStopped){
                 scannerRow.clearAnimation();
             }
@@ -354,9 +358,9 @@ public final class OcrCaptureActivity extends AppCompatActivity {
      */
     private boolean onTap(float rawX, float rawY) {
         OcrGraphic graphic = mGraphicOverlay.getGraphicAtLocation(rawX, rawY);
-        TextBlock text = null;
+        Text text = null;
         if (graphic != null) {
-            text = graphic.getTextBlock();
+            text = graphic.getText();
             if (text != null && text.getValue() != null) {
                 Log.d(TAG, "text data is being spoken! " + text.getValue());
                 // Speak the string.
