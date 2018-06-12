@@ -39,10 +39,6 @@ import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.schedulers.Schedulers;
 
-/**
- * Graphic instance for rendering TextBlock position, size, and ID within an associated graphic
- * overlay view.
- */
 public class OcrGraphic extends GraphicOverlay.Graphic {
     private int mId;
 
@@ -80,14 +76,6 @@ public class OcrGraphic extends GraphicOverlay.Graphic {
         return mText;
     }
 
-    /**
-     * Checks whether a point is within the bounding box of this graphic.
-     * The provided point should be relative to this graphic's containing overlay.
-     *
-     * @param x An x parameter in the relative context of the canvas.
-     * @param y A y parameter in the relative context of the canvas.
-     * @return True if the provided point is contained within this graphic's bounding box.
-     */
     public boolean contains(float x, float y) {
         if (mText == null) {
             return false;
@@ -100,9 +88,6 @@ public class OcrGraphic extends GraphicOverlay.Graphic {
         return (rect.left < x && rect.right > x && rect.top < y && rect.bottom > y);
     }
 
-    /**
-     * Draws the text block annotations for position, size, and raw value on the supplied canvas.
-     */
     @Override
     public void draw(Canvas canvas) {
         if (mText == null) {

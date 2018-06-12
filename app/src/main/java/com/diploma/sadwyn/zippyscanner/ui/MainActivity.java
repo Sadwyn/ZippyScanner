@@ -25,7 +25,6 @@ public final class MainActivity extends android.support.v7.app.AppCompatActivity
     private Map<String, String> toLanguagePair;
     private Map<String, String> fromLanguagePair;
 
-
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -67,8 +66,8 @@ public final class MainActivity extends android.support.v7.app.AppCompatActivity
         String[] array = ctx.getResources().getStringArray(arrayRes);
         Map<String, String> result = new HashMap<>();
         for (String str : array) {
-            String[] splittedItem = str.split("\\|");
-            result.put(splittedItem[0], splittedItem[1]);
+            String[] splitItem = str.split("\\|");
+            result.put(splitItem[0], splitItem[1]);
         }
         return result;
     }
