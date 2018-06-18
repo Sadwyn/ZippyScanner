@@ -12,23 +12,29 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.hardware.Camera;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.StrictMode;
 import android.support.annotation.NonNull;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.GestureDetector;
+import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.Animation;
-import android.view.animation.AnimationUtils;
 import android.view.animation.TranslateAnimation;
-import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.diploma.sadwyn.zippyscanner.R;
@@ -46,6 +52,7 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -75,11 +82,9 @@ public final class OcrCaptureActivity extends AppCompatActivity {
     private String fromLang;
     private boolean isTranslate;
 
-    private TranslateAnimation translateAnimationScannerLine;
-    private Animation translateAnimationCopyButtonIn;
-    private Animation translateAnimationCopyButtonOut;
+    Snackbar snackbar;
 
-    private Button copyButton;
+    private TranslateAnimation translateAnimationScannerLine;
 
     /**
      * Initializes the UI and creates the detector pipeline.
@@ -102,7 +107,6 @@ public final class OcrCaptureActivity extends AppCompatActivity {
         mGraphicOverlay = findViewById(R.id.graphicOverlay);
         scannerRow = findViewById(R.id.scannerRow);
         topLayout = findViewById(R.id.topLayout);
-        copyButton = findViewById(R.id.copyButton);
 
         translateAnimationScannerLine = new TranslateAnimation(Animation.RELATIVE_TO_PARENT, 0.0f, Animation.RELATIVE_TO_PARENT, 0.0f, Animation.RELATIVE_TO_PARENT, 0.0f, Animation.RELATIVE_TO_PARENT, 1.0f);
         translateAnimationScannerLine.setInterpolator(new AccelerateDecelerateInterpolator());
@@ -110,20 +114,15 @@ public final class OcrCaptureActivity extends AppCompatActivity {
         translateAnimationScannerLine.setRepeatCount(Animation.INFINITE);
         translateAnimationScannerLine.setDuration(500);
 
-        translateAnimationCopyButtonIn = AnimationUtils.loadAnimation(this, R.anim.slide_in_from_right);
-        translateAnimationCopyButtonOut = AnimationUtils.loadAnimation(this, R.anim.slide_out_to_right);
 
-        copyButton.setOnClickListener(view1 -> {
-            StringBuilder copyMessage = new StringBuilder();
-
-            for (String text : OcrDetectorProcessor.textToCopy) {
-                copyMessage.append(text).append(" ");
+        if (Build.VERSION.SDK_INT >= 24) {
+            try {
+                Method m = StrictMode.class.getMethod("disableDeathOnFileUriExposure");
+                m.invoke(null);
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-            ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-            assert clipboard != null;
-            clipboard.setPrimaryClip(ClipData.newPlainText("Zippy Scanned Text", copyMessage.toString().trim()));
-            Toast.makeText(getApplicationContext(), "Copied", Toast.LENGTH_SHORT).show();
-        });
+        }
 
         // Set good defaults for capturing text.
         boolean autoFocus = true;
@@ -180,16 +179,13 @@ public final class OcrCaptureActivity extends AppCompatActivity {
             if (!OcrDetectorProcessor.isStopped) {
                 scannerRow.clearAnimation();
 
-                if (OcrDetectorProcessor.textToCopy.isEmpty())
-                    copyButton.setVisibility(View.INVISIBLE);
-                else {
-                    copyButton.startAnimation(translateAnimationCopyButtonIn);
-                    copyButton.setVisibility(View.VISIBLE);
-                    writeScannedDataToFile();
+                if (!OcrDetectorProcessor.textToCopy.isEmpty()) {
+                    String fileName = writeScannedDataToFile();
+                    initializeSnackBar(fileName);
                 }
             } else {
-                if (copyButton.getVisibility() == View.VISIBLE) {
-                    copyButton.startAnimation(translateAnimationCopyButtonOut);
+                if (snackbar != null && snackbar.isShown()) {
+                    snackbar.dismiss();
                 }
                 scannerRow.startAnimation(translateAnimationScannerLine);
             }
@@ -219,7 +215,52 @@ public final class OcrCaptureActivity extends AppCompatActivity {
                         .build();
     }
 
-    private void writeScannedDataToFile() {
+    private void initializeSnackBar(String fileName) {
+        View rootView = findViewById(android.R.id.content);
+        snackbar = Snackbar.make(rootView, "", Snackbar.LENGTH_LONG);
+        Snackbar.SnackbarLayout layout = (Snackbar.SnackbarLayout) snackbar.getView();
+
+        TextView textView = layout.findViewById(android.support.design.R.id.snackbar_text);
+        textView.setVisibility(View.INVISIBLE);
+
+        View snackView = getLayoutInflater().inflate(R.layout.snackbar_view, layout);
+
+        snackView.setBackgroundColor(Color.WHITE);
+
+        TextView copyButton = snackView.findViewById(R.id.copyButton);
+        TextView shareButton = snackView.findViewById(R.id.shareButton);
+
+
+        snackbar.setDuration(5000);
+        snackbar.show();
+
+        copyButton.setOnClickListener(view1 -> {
+            StringBuilder copyMessage = new StringBuilder();
+
+            for (String text : OcrDetectorProcessor.textToCopy) {
+                copyMessage.append(text).append(" ");
+            }
+            ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            assert clipboard != null;
+            clipboard.setPrimaryClip(ClipData.newPlainText("Zippy Scanned Text", copyMessage.toString().trim()));
+            Toast.makeText(getApplicationContext(), "Copied", Toast.LENGTH_SHORT).show();
+        });
+
+        shareButton.setOnClickListener(view -> {
+            if(fileName!=null) {
+                File file = new File(DATA_FOLDER + fileName);
+                Intent sharingIntent = new Intent(Intent.ACTION_SEND);
+                sharingIntent.setType("text/*");
+                sharingIntent.putExtra(Intent.EXTRA_STREAM, Uri.parse("file://" + file.getAbsolutePath()));
+                startActivity(Intent.createChooser(sharingIntent, "Share file with"));
+            }
+            else {
+                Toast.makeText(this, "File wasn't written", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private String writeScannedDataToFile() {
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy_hh.mm.ss");
         Date date = new Date();
         String formattedDate = dateFormat.format(date);
@@ -228,7 +269,8 @@ public final class OcrCaptureActivity extends AppCompatActivity {
             new File(DATA_FOLDER).mkdirs();
         }
 
-        File file = new File(DATA_FOLDER + OcrDetectorProcessor.textToCopy.get(0) + formattedDate + ".txt");
+        String fileName = OcrDetectorProcessor.textToCopy.get(0) + formattedDate + ".txt";
+        File file = new File(DATA_FOLDER + fileName);
         try {
             file.createNewFile();
         } catch (IOException e) {
@@ -243,10 +285,11 @@ public final class OcrCaptureActivity extends AppCompatActivity {
                 fos.write(space);
                 fos.flush();
             }
-            Toast.makeText(this, "Text has been saved to file by path" + DATA_FOLDER, Toast.LENGTH_LONG).show();
+            return fileName;
         } catch (IOException e) {
             Toast.makeText(this, "Error while saving file", Toast.LENGTH_SHORT).show();
             e.printStackTrace();
+            return null;
         }
     }
 
