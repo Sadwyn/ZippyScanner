@@ -14,6 +14,7 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.os.Bundle;
+import android.os.Environment;
 import android.speech.tts.TextToSpeech;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
@@ -43,7 +44,13 @@ import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.vision.text.Text;
 import com.google.android.gms.vision.text.TextRecognizer;
 
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
@@ -51,7 +58,7 @@ import java.util.Locale;
 public final class OcrCaptureActivity extends AppCompatActivity {
     private static final String TAG = "OcrCaptureActivity";
 
-
+    public static final String DATA_FOLDER = Environment.getExternalStorageDirectory() + "/Android/" + "data/" + "com.diploma.sadwyn.zippyscanner/";
     private static final int RC_HANDLE_GMS = 9001;
     private static final int RC_HANDLE_CAMERA_PERM = 2;
 
@@ -84,6 +91,11 @@ public final class OcrCaptureActivity extends AppCompatActivity {
     public void onCreate(Bundle bundle) {
         super.onCreate(bundle);
         setContentView(R.layout.ocr_capture);
+
+        if (!new File(DATA_FOLDER).exists()) {
+            new File(DATA_FOLDER).mkdir();
+        }
+
         if (bundle != null) {
             toLang = bundle.getString("toLanguage");
             fromLang = bundle.getString("fromLanguage");
@@ -177,6 +189,7 @@ public final class OcrCaptureActivity extends AppCompatActivity {
                 else {
                     copyButton.startAnimation(translateAnimationCopyButtonIn);
                     copyButton.setVisibility(View.VISIBLE);
+                    writeScannedDataToFile();
                 }
             } else {
                 if (copyButton.getVisibility() == View.VISIBLE) {
@@ -208,6 +221,32 @@ public final class OcrCaptureActivity extends AppCompatActivity {
                         .setFlashMode(useFlash ? Camera.Parameters.FLASH_MODE_TORCH : null)
                         .setFocusMode(autoFocus ? Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE : null)
                         .build();
+    }
+
+    private void writeScannedDataToFile() {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy_hh.mm.ss");
+        Date date = new Date();
+        String formattedDate = dateFormat.format(date);
+        File file = new File(DATA_FOLDER + OcrDetectorProcessor.textToCopy.get(0) + " " + formattedDate + ".txt");
+        if (file.exists()) {
+            file.delete();
+        }
+        try {
+            file.createNewFile();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        try (DataOutputStream fos = new DataOutputStream(new FileOutputStream(file))) {
+            for (String word : OcrDetectorProcessor.textToCopy) {
+                byte bytes[] = word.getBytes();
+                fos.write(bytes);
+                fos.flush();
+            }
+            fos.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
