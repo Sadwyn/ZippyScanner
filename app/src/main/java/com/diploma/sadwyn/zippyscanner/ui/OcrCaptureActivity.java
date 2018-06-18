@@ -15,7 +15,6 @@ import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.os.Bundle;
 import android.os.Environment;
-import android.speech.tts.TextToSpeech;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -27,7 +26,6 @@ import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
-import android.view.animation.DecelerateInterpolator;
 import android.view.animation.TranslateAnimation;
 import android.widget.Button;
 import android.widget.FrameLayout;
@@ -48,17 +46,14 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.List;
-import java.util.Locale;
 
 
 public final class OcrCaptureActivity extends AppCompatActivity {
     private static final String TAG = "OcrCaptureActivity";
 
-    public static final String DATA_FOLDER = Environment.getExternalStorageDirectory() + "/Android/" + "data/" + "com.diploma.sadwyn.zippyscanner/";
+    public static final String DATA_FOLDER = Environment.getExternalStorageDirectory().toString() + "/Android/" + "data/" + "com.diploma.sadwyn.zippyscanner/";
     private static final int RC_HANDLE_GMS = 9001;
     private static final int RC_HANDLE_CAMERA_PERM = 2;
 
@@ -78,6 +73,8 @@ public final class OcrCaptureActivity extends AppCompatActivity {
 
     private String toLang;
     private String fromLang;
+    private boolean isTranslate;
+
     private TranslateAnimation translateAnimationScannerLine;
     private Animation translateAnimationCopyButtonIn;
     private Animation translateAnimationCopyButtonOut;
@@ -92,16 +89,14 @@ public final class OcrCaptureActivity extends AppCompatActivity {
         super.onCreate(bundle);
         setContentView(R.layout.ocr_capture);
 
-        if (!new File(DATA_FOLDER).exists()) {
-            new File(DATA_FOLDER).mkdir();
-        }
-
         if (bundle != null) {
             toLang = bundle.getString("toLanguage");
             fromLang = bundle.getString("fromLanguage");
+            isTranslate = bundle.getBoolean("isTranslate");
         } else if (getIntent() != null) {
             toLang = getIntent().getStringExtra("toLanguage");
             fromLang = getIntent().getStringExtra("fromLanguage");
+            isTranslate = getIntent().getBooleanExtra("isTranslate", false);
         }
         mPreview = findViewById(R.id.preview);
         mGraphicOverlay = findViewById(R.id.graphicOverlay);
@@ -140,7 +135,7 @@ public final class OcrCaptureActivity extends AppCompatActivity {
         if (rc == PackageManager.PERMISSION_GRANTED) {
             createCameraSource(autoFocus, useFlash);
         } else {
-            requestCameraPermission();
+            requestCameraAndStoragePermission();
         }
 
         gestureDetector = new GestureDetector(this, new CaptureGestureListener());
@@ -151,13 +146,14 @@ public final class OcrCaptureActivity extends AppCompatActivity {
     protected void onSaveInstanceState(Bundle outState) {
         outState.putString("toLanguage", toLang);
         outState.putString("fromLanguage", fromLang);
+        outState.putBoolean("isTranslate", isTranslate);
         super.onSaveInstanceState(outState);
     }
 
-    private void requestCameraPermission() {
+    private void requestCameraAndStoragePermission() {
         Log.w(TAG, "Camera permission is not granted. Requesting permission");
 
-        final String[] permissions = new String[]{Manifest.permission.CAMERA};
+        final String[] permissions = new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE};
 
         if (!ActivityCompat.shouldShowRequestPermissionRationale(this,
                 Manifest.permission.CAMERA)) {
@@ -178,7 +174,7 @@ public final class OcrCaptureActivity extends AppCompatActivity {
     private void createCameraSource(boolean autoFocus, boolean useFlash) {
         Context context = getApplicationContext();
         TextRecognizer textRecognizer = new TextRecognizer.Builder(context).build();
-        textRecognizer.setProcessor(new OcrDetectorProcessor(mGraphicOverlay, toLang, fromLang));
+        textRecognizer.setProcessor(new OcrDetectorProcessor(mGraphicOverlay, toLang, fromLang, isTranslate));
 
         topLayout.setOnClickListener(view -> {
             if (!OcrDetectorProcessor.isStopped) {
@@ -227,10 +223,12 @@ public final class OcrCaptureActivity extends AppCompatActivity {
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy_hh.mm.ss");
         Date date = new Date();
         String formattedDate = dateFormat.format(date);
-        File file = new File(DATA_FOLDER + OcrDetectorProcessor.textToCopy.get(0) + " " + formattedDate + ".txt");
-        if (file.exists()) {
-            file.delete();
+
+        if (!new File(DATA_FOLDER).exists()) {
+            new File(DATA_FOLDER).mkdirs();
         }
+
+        File file = new File(DATA_FOLDER + OcrDetectorProcessor.textToCopy.get(0) + formattedDate + ".txt");
         try {
             file.createNewFile();
         } catch (IOException e) {
@@ -239,12 +237,15 @@ public final class OcrCaptureActivity extends AppCompatActivity {
 
         try (DataOutputStream fos = new DataOutputStream(new FileOutputStream(file))) {
             for (String word : OcrDetectorProcessor.textToCopy) {
-                byte bytes[] = word.getBytes();
+                byte[] bytes = word.getBytes();
+                byte[] space = " ".getBytes();
                 fos.write(bytes);
+                fos.write(space);
                 fos.flush();
             }
-            fos.close();
+            Toast.makeText(this, "Text has been saved to file by path" + DATA_FOLDER, Toast.LENGTH_LONG).show();
         } catch (IOException e) {
+            Toast.makeText(this, "Error while saving file", Toast.LENGTH_SHORT).show();
             e.printStackTrace();
         }
     }

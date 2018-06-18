@@ -42,12 +42,14 @@ public class OcrDetectorProcessor implements Detector.Processor<TextBlock> {
     private String toLang;
     private String fromLang;
     public static boolean isStopped = true;
+    public boolean isTranslate = false;
     public static List<String> textToCopy = new ArrayList<>();
 
-    public OcrDetectorProcessor(GraphicOverlay<OcrGraphic> ocrGraphicOverlay, String toLang, String fromLang) {
+    public OcrDetectorProcessor(GraphicOverlay<OcrGraphic> ocrGraphicOverlay, String toLang, String fromLang, boolean isTranslate) {
         mGraphicOverlay = ocrGraphicOverlay;
         this.toLang = toLang;
         this.fromLang = fromLang;
+        this.isTranslate = isTranslate;
     }
 
     /**
@@ -68,16 +70,22 @@ public class OcrDetectorProcessor implements Detector.Processor<TextBlock> {
                 if (item != null && item.getValue() != null) {
                     Log.d("OcrDetectorProcessor", "Text detected! " + item.getValue());
                     for (Text text : item.getComponents()) {
-                        App.getApi().translate(text.getValue(), toLang, "text", fromLang, "nmt", BuildConfig.APIKEY)
-                                .subscribeOn(Schedulers.io())
-                                .observeOn(AndroidSchedulers.mainThread())
-                                .subscribe(translationResult -> {
-                                    OcrGraphic graphic = new OcrGraphic(mGraphicOverlay, text, translationResult.getData().getTranslations().get(0).getTranslatedText());
-                                    textToCopy.add(translationResult.getData().getTranslations().get(0).getTranslatedText());
-                                    mGraphicOverlay.add(graphic);
-                                }, Throwable::printStackTrace);
+                        if(isTranslate) {
+                            App.getApi().translate(text.getValue(), toLang, "text", fromLang, "nmt", BuildConfig.APIKEY)
+                                    .subscribeOn(Schedulers.io())
+                                    .observeOn(AndroidSchedulers.mainThread())
+                                    .subscribe(translationResult -> {
+                                        OcrGraphic graphic = new OcrGraphic(mGraphicOverlay, text, translationResult.getData().getTranslations().get(0).getTranslatedText());
+                                        textToCopy.add(translationResult.getData().getTranslations().get(0).getTranslatedText());
+                                        mGraphicOverlay.add(graphic);
+                                    }, Throwable::printStackTrace);
+                        }
+                        else {
+                            textToCopy.add(text.getValue());
+                            OcrGraphic graphic = new OcrGraphic(mGraphicOverlay, text);
+                            mGraphicOverlay.add(graphic);
+                        }
                     }
-
                 }
             }
             try {
